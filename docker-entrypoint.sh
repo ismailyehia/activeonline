@@ -25,8 +25,21 @@ echo "==> Caching config (uses Render environment variables)..."
 php artisan config:clear
 php artisan config:cache
 
-echo "==> Running database migrations..."
-php artisan migrate --force
+if [ "${DB_RESET_ON_DEPLOY}" = "true" ]; then
+    # ONE-TIME USE: drops ALL tables in the database and rebuilds them.
+    # Remove DB_RESET_ON_DEPLOY from Render right after this deploy succeeds,
+    # otherwise every restart wipes the data.
+    echo "==> !!! DB_RESET_ON_DEPLOY=true: dropping all tables and re-running migrations !!!"
+    php artisan migrate:fresh --force
+else
+    echo "==> Running database migrations..."
+    if ! php artisan migrate --force; then
+        echo "==> Migration failed. If it says a table 'already exists', the database has"
+        echo "==> tables but no migration history. Set DB_RESET_ON_DEPLOY=true in Render"
+        echo "==> for ONE deploy to rebuild it (this deletes all data), then remove it."
+        exit 1
+    fi
+fi
 
 echo "==> Seeding database (if needed)..."
 php artisan db:seed --force
