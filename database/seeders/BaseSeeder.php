@@ -10,13 +10,13 @@ use Illuminate\Database\Seeder;
 class BaseSeeder extends Seeder
 {
     public const POSITIONS = [
-        ['code' => Position::PRESIDENT, 'name' => 'الرئيس', 'global_view' => true, 'is_president' => true],
-        ['code' => Position::VICE_PRESIDENT, 'name' => 'نائب الرئيس'],
-        ['code' => Position::SECRETARY, 'name' => 'أمين السر'],
-        ['code' => Position::FINANCE, 'name' => 'مسؤول الشؤون المالية والإدارية'],
-        ['code' => Position::PLANNING, 'name' => 'مسؤول التخطيط والمتابعة', 'global_view' => true, 'is_planning' => true],
-        ['code' => Position::MEDIA, 'name' => 'مسؤول العلاقات العامة والإعلام'],
-        ['code' => Position::ENGINEERING, 'name' => 'مسؤول الشؤون الهندسية'],
+        ['code' => Position::PRESIDENT, 'ref_code' => 'PRS', 'name' => 'الرئيس', 'global_view' => true, 'is_president' => true],
+        ['code' => Position::VICE_PRESIDENT, 'ref_code' => 'VPR', 'name' => 'نائب الرئيس'],
+        ['code' => Position::SECRETARY, 'ref_code' => 'SEC', 'name' => 'أمين السر'],
+        ['code' => Position::FINANCE, 'ref_code' => 'FIN', 'name' => 'مسؤول الشؤون المالية والإدارية'],
+        ['code' => Position::PLANNING, 'ref_code' => 'PLN', 'name' => 'مسؤول التخطيط والمتابعة', 'global_view' => true, 'is_planning' => true],
+        ['code' => Position::MEDIA, 'ref_code' => 'MED', 'name' => 'مسؤول العلاقات العامة والإعلام'],
+        ['code' => Position::ENGINEERING, 'ref_code' => 'ENG', 'name' => 'مسؤول الشؤون الهندسية'],
     ];
 
     public function run(): void

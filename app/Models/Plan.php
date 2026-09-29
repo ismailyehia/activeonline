@@ -18,8 +18,15 @@ class Plan extends Model
         'closed' => 'مغلقة',
     ];
 
-    protected $fillable = ['planning_year_id', 'position_id', 'owner_user_id', 'scope_description', 'overall_outcome',
+    protected $fillable = ['ref', 'planning_year_id', 'position_id', 'owner_user_id', 'scope_description', 'overall_outcome',
         'risks', 'resources', 'status', 'current_version', 'copied_from_plan_id'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $p) {
+            $p->ref ??= \App\Support\Refs::plan($p);
+        });
+    }
 
     public function year(): BelongsTo { return $this->belongsTo(PlanningYear::class, 'planning_year_id'); }
     public function position(): BelongsTo { return $this->belongsTo(Position::class); }

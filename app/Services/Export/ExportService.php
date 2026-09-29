@@ -197,7 +197,8 @@ class ExportService
         ];
         $qs = $q ? [$q] : [1, 2, 3, 4];
         foreach ($s['objectives'] as $n => $o) {
-            $b[] = ['h3', ($n + 1) . '. ' . $o['title'] . ' — الوزن ' . Fmt::num($o['weight']) . '%'];
+            $b[] = ['h3', ($o['ref'] ? $o['ref'] . ' ' : ($n + 1) . '. ') . $o['title'] . ' — الوزن ' . Fmt::num($o['weight']) . '%'];
+            $b[] = ['p', 'الهدف الاستراتيجي: ' . ($o['strategic_goal'] ?? 'غير مرتبط')];
             if ($o['description']) $b[] = ['p', $o['description']];
             $b[] = ['table', ['المؤشر', 'التعريف', 'الوحدة', 'النوع', 'اتجاه التحسن', 'طريقة التجميع', 'الوزن داخل الهدف', 'مصدر البيانات', 'طريقة التحقق', 'الدورية', 'المالك'],
                 array_map(fn ($i) => [$i['name'], $i['definition'], $i['unit'], $i['kind'], $i['direction'], $i['aggregation'], $i['weight'] !== null ? Fmt::num($i['weight']) . '%' : 'متساوٍ', $i['data_source'], $i['verification'], $i['frequency'], $i['owner']], $o['indicators']), 'wide'];
@@ -222,7 +223,7 @@ class ExportService
         $rows = [];
         foreach ($s['projects'] as $p) {
             foreach ($p['tasks'] ?: [['title' => '—', 'quarter' => null, 'original_quarter' => null, 'responsible' => null, 'due_on' => '—', 'evidence' => null, 'status' => '—']] as $t) {
-                $rows[] = [$p['type'] . ': ' . $p['name'], $p['starts_on'] . ' ← ' . $p['ends_on'], $t['title'],
+                $rows[] = [trim(($p['ref'] ?? '') . ' ' . $p['type'] . ': ' . $p['name']) . (! empty($p['parent_ref']) ? ' (ضمن ' . $p['parent_ref'] . ')' : '') . (! empty($p['owner']) ? ' — المسؤول: ' . $p['owner'] : ''), $p['starts_on'] . ' ← ' . $p['ends_on'], $t['title'],
                     $t['quarter'] ? ('ر' . $t['quarter'] . ($t['original_quarter'] != $t['quarter'] ? ' (أصلًا ر' . $t['original_quarter'] . ')' : '')) : '—',
                     $t['responsible'] ?? $p['responsible'], $t['due_on'], $t['evidence'], $t['status']];
             }
@@ -352,12 +353,12 @@ class ExportService
 
     private function projectBlocks(Project $p): array
     {
-        $p->load(['tasks.deferrals', 'objective']);
+        $p->load(['tasks.deferrals', 'objective', 'parent']);
 
-        return [['h2', $p->typeLabel() . ': ' . $p->name],
+        return [['h2', $p->ref . ' ' . $p->typeLabel() . ': ' . $p->name . ($p->parent ? ' (ضمن ' . $p->parent->ref . ')' : '')],
             ['kv', [['الهدف المرتبط', $p->objective?->title ?? '—'], ['الوصف', $p->description], ['المسؤول', $p->responsible], ['المدة', Fmt::date($p->starts_on) . ' ← ' . Fmt::date($p->ends_on)], ['الموارد', $p->resources]]],
-            ['table', ['المهمة', 'الربع الأصلي', 'الربع الحالي', 'المسؤول', 'الموعد', 'الحالة', 'سجل النقل'],
-                $p->tasks->map(fn ($t) => [$t->title, 'ر' . $t->original_quarter, 'ر' . $t->quarter, $t->responsible, Fmt::date($t->due_on), $t->statusLabel(),
+            ['table', ['الرقم', 'المهمة', 'الربع الأصلي', 'الربع الحالي', 'المسؤول', 'الموعد', 'الحالة', 'سجل النقل'],
+                $p->tasks->map(fn ($t) => [$t->ref, $t->title, 'ر' . $t->original_quarter, 'ر' . $t->quarter, $t->responsible, Fmt::date($t->due_on), $t->statusLabel(),
                     $t->deferrals->map(fn ($d) => 'ر' . $d->from_quarter . '←ر' . $d->to_quarter . ': ' . $d->reason)->implode(' | ')])->all()]];
     }
 

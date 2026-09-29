@@ -20,10 +20,11 @@
     </div>
 @else
     <div class="table-wrap"><table class="t">
-        <thead><tr><th>المنصب</th><th>مالك الخطة</th><th>الحالة</th><th>النسخة</th><th>آخر تحديث</th><th></th></tr></thead>
+        <thead><tr><th>الرقم</th><th>المنصب</th><th>مالك الخطة</th><th>الحالة</th><th>النسخة</th><th>آخر تحديث</th><th></th></tr></thead>
         <tbody>
         @foreach ($plans as $p)
             <tr>
+                <td class="n">{{ $p->ref }}</td>
                 <td><a href="{{ route('plans.show', $p) }}"><b>{{ $p->position->name }}</b></a></td>
                 <td>{{ $p->owner->name }}</td>
                 <td><span class="badge {{ $p->status }}">{{ $p->statusLabel() }}</span></td>

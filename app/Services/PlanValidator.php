@@ -12,8 +12,12 @@ class PlanValidator
 {
     public const TOLERANCE = 0.01;
 
-    /** @return array<int, array{field:string, message:string, url:?string}> */
-    public function errors(Plan $plan): array
+    /**
+     * @param  bool  $requireStrategicLinks  يُفرض الربط بالأهداف الاستراتيجية عند الإعداد والإرسال فقط؛
+     *                                        لا يُفرض عند الاعتماد أو محاكاة طلبات التعديل حتى لا تتعطل خطط قائمة.
+     * @return array<int, array{field:string, message:string, url:?string}>
+     */
+    public function errors(Plan $plan, bool $requireStrategicLinks = true): array
     {
         $plan->load(['objectives.indicators.targets']);
         $e = [];
@@ -41,6 +45,16 @@ class PlanValidator
         }
         if (abs($sum - 100) > self::TOLERANCE) {
             $add('objectives.weight_sum', 'مجموع أوزان الأهداف يجب أن يساوي 100%، والمجموع الحالي ' . Fmt::num($sum) . '%.', $editUrl);
+        }
+
+        // الربط بالأهداف الاستراتيجية: إلزامي متى وُجدت أهداف استراتيجية فعّالة تغطي سنة الخطة
+        $plan->loadMissing('year');
+        if ($requireStrategicLinks && \App\Models\StrategicGoal::usableFor($plan->year->year)->exists()) {
+            foreach ($plan->objectives as $o) {
+                if (! $o->strategic_goal_id) {
+                    $add("objectives.{$o->id}.strategic_goal_id", "اربط الهدف «{$o->title}» بهدف استراتيجي من أهداف الجمعية.", $editUrl . '#obj-' . $o->id);
+                }
+            }
         }
 
         foreach ($plan->objectives as $o) {

@@ -26,7 +26,7 @@ use Illuminate\Validation\ValidationException;
 class ChangeRequestService
 {
     public const EDITABLE = [
-        'objective' => ['title' => 'عنوان الهدف', 'weight' => 'وزن الهدف'],
+        'objective' => ['title' => 'عنوان الهدف', 'weight' => 'وزن الهدف', 'strategic_goal_id' => 'الهدف الاستراتيجي'],
         'indicator' => ['annual_target' => 'المستهدف السنوي', 'weight' => 'وزن المؤشر', 'baseline' => 'خط الأساس', 'data_source' => 'مصدر البيانات'],
         'target' => ['target' => 'مستهدف الربع'],
     ];
@@ -47,7 +47,17 @@ class ChangeRequestService
             foreach ($fields as $f => $new) {
                 if (! isset(self::EDITABLE['objective'][$f]) || $new === null || $new === '') continue;
                 if ((string) $o->$f !== (string) $new && ! (is_numeric($new) && (float) $o->$f == (float) $new)) {
-                    $changes[] = ['entity' => 'objective', 'id' => $o->id, 'field' => $f, 'label' => self::EDITABLE['objective'][$f] . ' — ' . $o->title, 'old' => $o->$f, 'new' => $new];
+                    $c = ['entity' => 'objective', 'id' => $o->id, 'field' => $f, 'label' => self::EDITABLE['objective'][$f] . ' — ' . $o->title, 'old' => $o->$f, 'new' => $new];
+                    if ($f === 'strategic_goal_id') {
+                        $goal = \App\Models\StrategicGoal::whereKey((int) $new)->usableFor($plan->year->year)->first();
+                        if (! $goal) {
+                            throw ValidationException::withMessages(['changes' => 'الهدف الاستراتيجي المختار مؤرشف أو لا يغطي سنة الخطة.']);
+                        }
+                        $c['new'] = $goal->id;
+                        $c['old_label'] = $o->strategicGoal?->label() ?? 'غير مرتبط';
+                        $c['new_label'] = $goal->label();
+                    }
+                    $changes[] = $c;
                 }
             }
         }
@@ -121,7 +131,7 @@ class ChangeRequestService
         DB::beginTransaction();
         try {
             $this->applyChanges($changes);
-            $errors = (new PlanValidator())->errors($plan->fresh());
+            $errors = (new PlanValidator())->errors($plan->fresh(), false);
         } finally {
             DB::rollBack();
         }

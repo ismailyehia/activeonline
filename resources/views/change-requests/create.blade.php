@@ -22,6 +22,12 @@
                 <div class="form-grid g4">
                     <div class="field" style="grid-column: span 3"><label class="f">عنوان الهدف</label><input type="text" name="objectives[{{ $o->id }}][title]" value="{{ old('objectives.' . $o->id . '.title', $o->title) }}"></div>
                     <div class="field"><label class="f">وزن الهدف % <span class="muted">(الحالي {{ Fmt::num($o->weight) }})</span></label><input type="number" step="0.01" name="objectives[{{ $o->id }}][weight]" value="{{ old('objectives.' . $o->id . '.weight', $o->weight) }}"></div>
+                    <div class="field full"><label class="f">الهدف الاستراتيجي</label>
+                        <select name="objectives[{{ $o->id }}][strategic_goal_id]">
+                            @if (! $o->strategic_goal_id)<option value="">— غير مرتبط —</option>@endif
+                            @foreach ($goals as $g)<option value="{{ $g->id }}" @selected(old('objectives.' . $o->id . '.strategic_goal_id', $o->strategic_goal_id) == $g->id)>{{ $g->label() }}</option>@endforeach
+                            @if ($o->strategicGoal && ! $goals->contains('id', $o->strategic_goal_id))<option value="{{ $o->strategic_goal_id }}" selected>{{ $o->strategicGoal->label() }} (مؤرشف)</option>@endif
+                        </select></div>
                 </div>
                 <div class="table-wrap"><table class="t">
                     <thead><tr><th>المؤشر</th><th>خط الأساس</th><th>المستهدف السنوي</th>@for ($k = 1; $k <= 4; $k++)<th>ر{{ $k }}@if (in_array($k, $closed)) 🔒@endif</th>@endfor<th>الوزن</th><th>مصدر البيانات</th></tr></thead>

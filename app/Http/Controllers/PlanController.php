@@ -34,6 +34,7 @@ class PlanController extends Controller
         $u = $request->user();
         $data = $request->validate(['position_id' => 'required|exists:positions,id', 'planning_year_id' => 'required|exists:planning_years,id']);
         abort_unless(Access::holdsPosition($u, (int) $data['position_id']), 403, 'إنشاء الخطة متاح لصاحب المنصب فقط.');
+        abort_if(PlanningYear::find($data['planning_year_id'])->isClosed(), 422, 'السنة مغلقة ولا تقبل خططًا جديدة.');
         $existing = Plan::where($data)->first();
         if ($existing) {
             return redirect()->route('plans.show', $existing);
@@ -51,6 +52,7 @@ class PlanController extends Controller
         abort_unless(Access::isPlanOwner($u, $plan), 403);
         $target = PlanningYear::findOrFail($request->integer('planning_year_id'));
         abort_if($target->year <= $plan->year->year, 422, 'اختر سنة لاحقة لسنة الخطة المصدر.');
+        abort_if($target->isClosed(), 422, 'السنة الهدف مغلقة.');
         if ($ex = Plan::where('planning_year_id', $target->id)->where('position_id', $plan->position_id)->first()) {
             return redirect()->route('plans.show', $ex)->withErrors(['copy' => 'توجد خطة لهذا المنصب في سنة ' . $target->year . ' مسبقًا.']);
         }
@@ -64,7 +66,7 @@ class PlanController extends Controller
     {
         $this->canView($plan);
         $u = $request->user();
-        $plan->load(['position', 'year.quarters', 'owner', 'objectives.indicators.targets', 'projects.tasks']);
+        $plan->load(['position', 'year.quarters', 'owner', 'objectives.indicators.targets', 'objectives.strategicGoal', 'projects.tasks']);
         $q = $this->selectedQuarter();
         $tab = $request->query('tab', 'overview');
         $results = $plan->objectives->isNotEmpty() ? (new Results())->plan($plan, $q) : null;
@@ -78,7 +80,7 @@ class PlanController extends Controller
 
         switch ($tab) {
             case 'tasks':
-                $data['tasks'] = $plan->tasks()->with(['project', 'deferrals', 'owner'])->get();
+                $data['tasks'] = $plan->tasks()->with(['project.parent', 'deferrals', 'owner'])->get();
                 $data['users'] = User::where('is_active', true)->orderBy('name')->get(['id', 'name']);
                 break;
             case 'updates':
@@ -112,10 +114,11 @@ class PlanController extends Controller
     public function edit(Plan $plan)
     {
         $this->canEdit($plan);
-        $plan->load(['objectives.indicators', 'projects', 'position', 'year']);
+        $plan->load(['objectives.indicators', 'objectives.strategicGoal', 'projects.owner', 'projects.activities.owner', 'projects.activities.tasks.owner', 'projects.tasks.owner', 'position', 'year']);
         $errors_list = (new PlanValidator())->errors($plan);
+        $goals = \App\Models\StrategicGoal::usableFor($plan->year->year)->get();
 
-        return view('plans.edit', compact('plan', 'errors_list'));
+        return view('plans.edit', compact('plan', 'errors_list', 'goals'));
     }
 
     public function update(Request $request, Plan $plan)

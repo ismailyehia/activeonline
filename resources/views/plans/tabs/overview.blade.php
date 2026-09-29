@@ -3,7 +3,8 @@
     <div class="card">
         <h2>بيانات الخطة</h2>
         <table class="kv">
-            <tr><th>السنة</th><td>{{ $plan->year->year }}</td></tr>
+            <tr><th>الرقم المرجعي</th><td class="num"><b>{{ $plan->ref }}</b></td></tr>
+            <tr><th>السنة</th><td>{{ $plan->year->displayName() }} ({{ $plan->year->year }})</td></tr>
             <tr><th>المنصب</th><td>{{ $plan->position->name }}</td></tr>
             <tr><th>مالك الخطة</th><td>{{ $plan->owner->name }}</td></tr>
             <tr><th>وصف نطاق العمل</th><td>{!! nl2br(e($plan->scope_description ?: '—')) !!}</td></tr>
@@ -24,6 +25,25 @@
         </div>
     </div>
 </div>
+
+@if ($plan->objectives->isNotEmpty())
+    <div class="card">
+        <h2>أهداف الخطة وربطها بالأهداف الاستراتيجية</h2>
+        <div class="table-wrap"><table class="t">
+            <thead><tr><th>الرقم</th><th>هدف الخطة</th><th>الوزن</th><th>الهدف الاستراتيجي للجمعية</th></tr></thead>
+            <tbody>
+            @foreach ($plan->objectives as $o)
+                <tr>
+                    <td class="n">{{ $o->ref }}</td>
+                    <td><a href="{{ route('objectives.show', $o) }}">{{ $o->title }}</a></td>
+                    <td class="n">{{ Fmt::num($o->weight) }}%</td>
+                    <td>@if ($o->strategicGoal)<a href="{{ route('strategic-goals.show', $o->strategicGoal) }}">{{ $o->strategicGoal->label() }}</a>@else<span class="muted small">غير مرتبط</span>@endif</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table></div>
+    </div>
+@endif
 
 @if ($results)
     <div class="card">
@@ -62,9 +82,9 @@
         <div class="table-wrap"><table class="t">
             <thead><tr><th>الاسم</th><th>النوع</th><th>المسؤول</th><th>المدة</th><th>المهام</th><th></th></tr></thead>
             <tbody>
-            @foreach ($plan->projects as $p)
+            @foreach ($plan->projects->whereNull('parent_id') as $p)
                 <tr>
-                    <td><a href="{{ route('projects.show', $p) }}">{{ $p->name }}</a></td>
+                    <td><span class="num small muted">{{ $p->ref }}</span> <a href="{{ route('projects.show', $p) }}">{{ $p->name }}</a>@if ($p->activities->isNotEmpty())<div class="small muted">{{ $p->activities->count() }} نشاط</div>@endif</td>
                     <td>{{ $p->typeLabel() }}</td>
                     <td>{{ $p->responsible ?? '—' }}</td>
                     <td class="n"><span class="num">{{ Fmt::date($p->starts_on) }}</span> – <span class="num">{{ Fmt::date($p->ends_on) }}</span></td>

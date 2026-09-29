@@ -22,11 +22,12 @@ class ChangeRequestController extends Controller
     {
         $this->canView($plan);
         abort_unless(app(ChangeRequestService::class)->canRequest($r->user(), $plan), 403, 'طلب التعديل متاح لصاحب المنصب ومسؤول التخطيط على خطة معتمدة أو نشطة.');
-        $plan->load(['objectives.indicators.targets', 'year.quarters', 'position']);
+        $plan->load(['objectives.indicators.targets', 'objectives.strategicGoal', 'year.quarters', 'position']);
+        $goals = \App\Models\StrategicGoal::usableFor($plan->year->year)->get();
         $type = $r->query('type', 'plan_amendment');
         $indicator = $type === 'closed_quarter_result' ? $plan->indicators()->findOrFail($r->integer('indicator')) : null;
 
-        return view('change-requests.create', compact('plan', 'type', 'indicator'));
+        return view('change-requests.create', compact('plan', 'type', 'indicator', 'goals'));
     }
 
     public function store(Request $r, Plan $plan)

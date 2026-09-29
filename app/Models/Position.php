@@ -16,9 +16,16 @@ class Position extends Model
     public const MEDIA = 'pr_media';
     public const ENGINEERING = 'engineering';
 
-    protected $fillable = ['code', 'name', 'global_view', 'is_planning', 'is_president', 'sort'];
+    protected $fillable = ['code', 'ref_code', 'name', 'global_view', 'is_planning', 'is_president', 'sort'];
 
     protected $casts = ['global_view' => 'boolean', 'is_planning' => 'boolean', 'is_president' => 'boolean'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $p) {
+            $p->ref_code ??= strtoupper(substr(preg_replace('/[^a-z]/i', '', $p->code), 0, 3));
+        });
+    }
 
     public function users(): BelongsToMany
     {

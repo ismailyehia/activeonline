@@ -8,12 +8,13 @@
         <div class="empty">لا توجد مهام.</div>
     @else
     <div class="table-wrap"><table class="t">
-        <thead><tr><th>المهمة</th><th>المشروع</th><th>الربع</th><th>المسؤول</th><th>الموعد</th><th>الدليل المطلوب</th><th>الحالة</th><th></th></tr></thead>
+        <thead><tr><th>الرقم</th><th>المهمة</th><th>المبادرة / النشاط</th><th>الربع</th><th>المسؤول</th><th>الموعد</th><th>الدليل المطلوب</th><th>الحالة</th><th></th></tr></thead>
         <tbody>
         @foreach ($tasks as $t)
             <tr>
+                <td class="n">{{ $t->ref }}</td>
                 <td><b>{{ $t->title }}</b>@if ($t->description)<div class="small muted">{{ $t->description }}</div>@endif</td>
-                <td class="small">@if ($t->project)<a href="{{ route('projects.show', $t->project) }}">{{ $t->project->name }}</a>@else — @endif</td>
+                <td class="small">@if ($t->project)<a href="{{ route('projects.show', $t->project) }}">{{ $t->project->ref }} {{ $t->project->name }}</a>@if ($t->project->parent)<div class="muted">ضمن {{ $t->project->parent->ref }}</div>@endif @else — @endif</td>
                 <td>ر{{ $t->quarter }}@if ($t->original_quarter != $t->quarter)<div class="small muted">أصلًا ر{{ $t->original_quarter }}</div>@endif</td>
                 <td class="small">{{ $t->responsible ?? $t->owner?->name ?? '—' }}</td>
                 <td class="n">{{ Fmt::date($t->due_on) }}</td>

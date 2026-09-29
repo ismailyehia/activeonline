@@ -112,6 +112,11 @@ class Access
 
     public static function canManageYears(User $u): bool { return $u->is_active && (self::isPlanning($u) || self::isPresident($u)); }
 
+    /** الأهداف الاستراتيجية: يديرها الرئيس ومسؤولة التخطيط (بموافقة مالك النظام)، ويطّلع عليها كل صاحب منصب */
+    public static function canManageStrategicGoals(User $u): bool { return $u->is_active && (self::isPresident($u) || self::isPlanning($u)); }
+
+    public static function canSeeStrategicGoals(User $u): bool { return $u->is_active && (self::positions($u)->isNotEmpty() || self::hasGlobalView($u)); }
+
     public static function canSeeExecutiveBoard(User $u): bool { return self::hasGlobalView($u); }
 
     public static function canSeeAudit(User $u): bool { return self::hasGlobalView($u) || $u->is_system_admin; }

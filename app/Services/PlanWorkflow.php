@@ -60,7 +60,7 @@ class PlanWorkflow
         if ($action === 'submit' && ($errors = (new PlanValidator())->errors($p))) {
             throw ValidationException::withMessages(['plan' => array_column($errors, 'message')]);
         }
-        if ($action === 'approve' && ($errors = (new PlanValidator())->errors($p))) {
+        if ($action === 'approve' && ($errors = (new PlanValidator())->errors($p, false))) {
             throw ValidationException::withMessages(['plan' => array_column($errors, 'message')]);
         }
 

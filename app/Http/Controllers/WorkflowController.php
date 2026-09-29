@@ -14,7 +14,7 @@ class WorkflowController extends Controller
     public function review(Plan $plan)
     {
         $this->canView($plan);
-        $plan->load(['position', 'year.quarters', 'owner', 'objectives.indicators.targets', 'objectives.indicators.owner', 'projects.tasks']);
+        $plan->load(['position', 'year.quarters', 'owner', 'objectives.indicators.targets', 'objectives.indicators.owner', 'objectives.strategicGoal', 'projects.tasks']);
         $errors_list = (new PlanValidator())->errors($plan);
         $actions = app(PlanWorkflow::class)->availableActions(auth()->user(), $plan);
         $reviews = $plan->reviews()->with(['user', 'delegation'])->get();

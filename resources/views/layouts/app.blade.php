@@ -59,6 +59,9 @@
         @if ($hasPlans)
             <a class="nav {{ $on('plans.', 'objectives.', 'indicators.', 'projects.') }}" href="{{ route('plans.index') }}">{{ Access::hasGlobalView($u) ? 'جميع الخطط' : 'خطتي' }}</a>
         @endif
+        @if (Access::canSeeStrategicGoals($u))
+            <a class="nav {{ $on('strategic-goals.') }}" href="{{ route('strategic-goals.index') }}">الأهداف الاستراتيجية</a>
+        @endif
 
         @if ($isReviewer || Access::canSeeExecutiveBoard($u))
             <div class="grp">المتابعة الشاملة</div>

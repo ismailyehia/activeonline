@@ -23,10 +23,10 @@ class SearchController extends Controller
         $with = ['plan.position', 'plan.year'];
 
         return [
-            'objectives' => Objective::whereIn('plan_id', $plans)->where(fn ($q) => $q->where('title', 'like', $like)->orWhere('description', 'like', $like))->with($with)->limit(20)->get(),
+            'objectives' => Objective::whereIn('plan_id', $plans)->where(fn ($q) => $q->where('title', 'like', $like)->orWhere('description', 'like', $like)->orWhere('ref', 'like', $like))->with($with)->limit(20)->get(),
             'indicators' => Indicator::whereIn('plan_id', $plans)->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('definition', 'like', $like))->with($with)->limit(20)->get(),
-            'projects' => Project::whereIn('plan_id', $plans)->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('description', 'like', $like))->with($with)->limit(20)->get(),
-            'tasks' => Task::whereIn('plan_id', $plans)->where('title', 'like', $like)->with($with)->limit(20)->get(),
+            'projects' => Project::whereIn('plan_id', $plans)->where(fn ($q) => $q->where('name', 'like', $like)->orWhere('description', 'like', $like)->orWhere('ref', 'like', $like))->with($with)->limit(20)->get(),
+            'tasks' => Task::whereIn('plan_id', $plans)->where(fn ($q) => $q->where('title', 'like', $like)->orWhere('ref', 'like', $like))->with($with)->limit(20)->get(),
         ];
     }
 

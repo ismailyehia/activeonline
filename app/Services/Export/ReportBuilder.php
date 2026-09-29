@@ -49,7 +49,7 @@ class ReportBuilder
 
     public function planStructure(Plan $plan, ?int $onlyQuarter = null): array
     {
-        $plan->load(['objectives.indicators.targets', 'objectives.indicators.owner', 'projects.tasks.deferrals', 'owner', 'reviews.user']);
+        $plan->load(['objectives.strategicGoal', 'objectives.indicators.targets', 'objectives.indicators.owner', 'projects.tasks.deferrals', 'projects.parent', 'projects.owner', 'owner', 'reviews.user']);
         $objectives = [];
         foreach ($plan->objectives as $o) {
             $inds = [];
@@ -70,10 +70,10 @@ class ReportBuilder
                     'frequency' => Indicator::FREQUENCIES[$i->frequency] ?? '—', 'owner' => $i->owner?->name, 'evidence' => $i->required_evidence,
                 ];
             }
-            $objectives[] = ['title' => $o->title, 'description' => $o->description, 'weight' => $o->weight, 'indicators' => $inds];
+            $objectives[] = ['ref' => $o->ref, 'strategic_goal' => $o->strategicGoal?->label(), 'title' => $o->title, 'description' => $o->description, 'weight' => $o->weight, 'indicators' => $inds];
         }
         $projects = $plan->projects->map(fn (Project $p) => [
-            'type' => $p->typeLabel(), 'name' => $p->name, 'responsible' => $p->responsible, 'starts_on' => Fmt::date($p->starts_on), 'ends_on' => Fmt::date($p->ends_on),
+            'ref' => $p->ref, 'parent_ref' => $p->parent?->ref, 'owner' => $p->owner?->name, 'type' => $p->typeLabel(), 'name' => $p->name, 'responsible' => $p->responsible, 'starts_on' => Fmt::date($p->starts_on), 'ends_on' => Fmt::date($p->ends_on),
             'tasks' => $p->tasks->filter(fn ($t) => ! $onlyQuarter || $t->quarter == $onlyQuarter || $t->deferrals->contains('from_quarter', $onlyQuarter))
                 ->map(fn ($t) => ['title' => $t->title, 'quarter' => $t->quarter, 'original_quarter' => $t->original_quarter, 'responsible' => $t->responsible,
                     'due_on' => Fmt::date($t->due_on), 'evidence' => $t->required_evidence, 'status' => $t->statusLabel()])->values()->all(),

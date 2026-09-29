@@ -29,7 +29,8 @@
                 <tr><th>الموارد</th><td>{!! nl2br(e($plan->resources ?: '—')) !!}</td></tr>
             </table>
             @foreach ($plan->objectives as $o)
-                <h3 style="margin-top:1rem">{{ $loop->iteration }}. {{ $o->title }} — <span class="num">{{ Fmt::num($o->weight) }}%</span></h3>
+                <h3 style="margin-top:1rem"><span class="num">{{ $o->ref }}</span> {{ $o->title }} — <span class="num">{{ Fmt::num($o->weight) }}%</span></h3>
+                <p class="small">الهدف الاستراتيجي: @if ($o->strategicGoal)<a href="{{ route('strategic-goals.show', $o->strategicGoal) }}">{{ $o->strategicGoal->label() }}</a>@else<span class="muted">غير مرتبط</span>@endif</p>
                 <div class="table-wrap"><table class="t">
                     <thead><tr><th>المؤشر والتعريف</th><th>الوحدة / النوع / الاتجاه</th><th>خط الأساس</th><th>السنوي</th><th>ر1</th><th>ر2</th><th>ر3</th><th>ر4</th><th>المصدر والتحقق</th><th>الدورية / المالك</th></tr></thead>
                     <tbody>

@@ -27,8 +27,8 @@
                 @foreach ($cr->changes as $c)
                     <tr>
                         <td>{{ $c['label'] }}</td>
-                        <td><span class="diff-old">{{ is_numeric($c['old']) ? Fmt::num($c['old']) : ($c['old'] ?? '—') }}</span></td>
-                        <td><span class="diff-new">{{ is_numeric($c['new']) ? Fmt::num($c['new']) : $c['new'] }}</span>@if (! empty($c['participants'])) <span class="small muted">({{ $c['participants'] }} مشاركًا)</span>@endif</td>
+                        <td><span class="diff-old">{{ $c['old_label'] ?? (is_numeric($c['old']) ? Fmt::num($c['old']) : ($c['old'] ?? '—')) }}</span></td>
+                        <td><span class="diff-new">{{ $c['new_label'] ?? (is_numeric($c['new']) ? Fmt::num($c['new']) : $c['new']) }}</span>@if (! empty($c['participants'])) <span class="small muted">({{ $c['participants'] }} مشاركًا)</span>@endif</td>
                     </tr>
                 @endforeach
                 </tbody>

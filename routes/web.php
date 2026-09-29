@@ -15,6 +15,7 @@ use App\Http\Controllers\IndicatorController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\PlanItemController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\StrategicGoalController;
 use App\Http\Controllers\UpdateController;
 use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\YearController;
@@ -88,9 +89,20 @@ Route::middleware(['auth', 'active', 'context'])->group(function () {
     Route::post('/plans/{plan}/corrective-actions', [FollowUpController::class, 'storeAction'])->name('corrective.store');
     Route::post('/corrective-actions/{action}', [FollowUpController::class, 'updateAction'])->name('corrective.update');
 
+    // الأهداف الاستراتيجية للجمعية
+    Route::get('/strategic-goals', [StrategicGoalController::class, 'index'])->name('strategic-goals.index');
+    Route::post('/strategic-goals', [StrategicGoalController::class, 'store'])->name('strategic-goals.store');
+    Route::get('/strategic-goals/{goal}', [StrategicGoalController::class, 'show'])->name('strategic-goals.show');
+    Route::put('/strategic-goals/{goal}', [StrategicGoalController::class, 'update'])->name('strategic-goals.update');
+    Route::post('/strategic-goals/{goal}/status', [StrategicGoalController::class, 'status'])->name('strategic-goals.status');
+    Route::delete('/strategic-goals/{goal}', [StrategicGoalController::class, 'destroy'])->name('strategic-goals.destroy');
+
     // السنوات والأرباع
     Route::get('/years', [YearController::class, 'index'])->name('years.index');
     Route::post('/years', [YearController::class, 'store'])->name('years.store');
+    Route::get('/years/{year}/edit', [YearController::class, 'edit'])->name('years.edit');
+    Route::put('/years/{year}', [YearController::class, 'update'])->name('years.update');
+    Route::post('/years/{year}/status/{action}', [YearController::class, 'transition'])->whereIn('action', array_keys(\App\Services\YearService::TRANSITIONS))->name('years.transition');
     Route::post('/years/{year}/quarters/{number}/close', [YearController::class, 'closeQuarter'])->whereNumber('number')->name('quarters.close');
     Route::post('/years/rules', [YearController::class, 'rules'])->name('rules.store');
 

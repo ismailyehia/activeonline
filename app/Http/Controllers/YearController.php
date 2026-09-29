@@ -16,20 +16,65 @@ class YearController extends Controller
     {
         $u = auth()->user();
         abort_unless(Access::canManageYears($u) || Access::hasGlobalView($u), 403);
-        $years = PlanningYear::with(['quarters' => fn ($q) => $q->orderBy('number'), 'plans.position'])->orderByDesc('year')->get();
+        $years = PlanningYear::with(['quarters' => fn ($q) => $q->orderBy('number'), 'plans.position', 'owner'])->orderByDesc('year')->get();
         $rules = StatusRule::orderByDesc('version')->get();
+        $users = \App\Models\User::where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
-        return view('years.index', compact('years', 'rules'));
+        return view('years.index', compact('years', 'rules', 'users'));
+    }
+
+    private const LABELS = ['year' => 'السنة', 'name' => 'اسم السنة', 'starts_on' => 'تاريخ البداية', 'ends_on' => 'تاريخ النهاية',
+        'owner_user_id' => 'المسؤول', 'plans_due_on' => 'موعد اعتماد الخطط', 'description' => 'الوصف', 'status' => 'الحالة'];
+
+    private function yearRules(): array
+    {
+        return [
+            'name' => 'required|string|max:150',
+            'starts_on' => 'required|date',
+            'ends_on' => 'required|date|after:starts_on',
+            'owner_user_id' => 'nullable|exists:users,id',
+            'plans_due_on' => 'nullable|date',
+            'description' => 'nullable|string|max:3000',
+        ];
     }
 
     public function store(Request $r)
     {
         abort_unless(Access::canManageYears($r->user()), 403);
-        $d = $r->validate(['year' => 'required|integer|min:2020|max:2100|unique:planning_years,year'], ['year.unique' => 'هذه السنة موجودة مسبقًا.'], ['year' => 'السنة']);
-        $y = app(YearService::class)->create((int) $d['year'], $r->user());
+        $d = $r->validate(['year' => 'required|integer|min:2020|max:2100|unique:planning_years,year', 'status' => 'required|in:draft,open'] + $this->yearRules(),
+            ['year.unique' => 'هذه السنة موجودة مسبقًا.'], self::LABELS);
+        $y = app(YearService::class)->create((int) $d['year'], $r->user(), $d);
         session(['year_id' => $y->id, 'quarter' => 1]);
 
-        return back()->with('ok', 'أُنشئت سنة ' . $y->year . ' بأرباعها الأربعة. يستطيع كل مسؤول الآن إنشاء خطته أو نسخ هيكل خطته السابقة.');
+        return redirect()->route('years.index')->with('ok', 'أُنشئت «' . $y->displayName() . '» بأرباعها الأربعة (' . $y->statusLabel() . '). يستطيع كل مسؤول الآن إنشاء خطته أو نسخ هيكل خطته السابقة.');
+    }
+
+    public function edit(PlanningYear $year)
+    {
+        abort_unless(Access::canManageYears(auth()->user()), 403);
+        $year->load(['quarters', 'owner', 'closer']);
+        $users = \App\Models\User::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $history = \App\Models\AuditLog::where('entity_type', 'PlanningYear')->where('entity_id', $year->id)->with('user')->latest('id')->get();
+
+        return view('years.edit', compact('year', 'users', 'history'));
+    }
+
+    public function update(Request $r, PlanningYear $year)
+    {
+        abort_unless(Access::canManageYears($r->user()), 403);
+        $d = $r->validate($this->yearRules(), [], self::LABELS);
+        app(YearService::class)->update($year, $r->user(), $d);
+
+        return redirect()->route('years.edit', $year)->with('ok', 'حُفظت بيانات السنة.');
+    }
+
+    public function transition(Request $r, PlanningYear $year, string $action)
+    {
+        abort_unless(Access::canManageYears($r->user()), 403);
+        $d = $r->validate(['reason' => 'nullable|string|max:2000'], [], ['reason' => 'السبب']);
+        app(YearService::class)->transition($year, $r->user(), $action, $d['reason'] ?? null);
+
+        return back()->with('ok', YearService::TRANSITIONS[$action]['label'] . ': تم. الحالة الآن «' . $year->statusLabel() . '».');
     }
 
     public function closeQuarter(Request $r, PlanningYear $year, int $number)

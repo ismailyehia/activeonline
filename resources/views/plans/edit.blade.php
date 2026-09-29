@@ -35,7 +35,8 @@
     @foreach ($plan->objectives as $o)
         @php $iw = $o->indicators->whereNotNull('weight'); $isum = $o->indicators->sum('weight'); @endphp
         <details class="box" id="obj-{{ $o->id }}" open>
-            <summary>{{ $loop->iteration }}. {{ $o->title }} <span class="small muted">— الوزن {{ Fmt::num($o->weight) }}%</span>
+            <summary><span class="num small muted">{{ $o->ref }}</span> {{ $o->title }} <span class="small muted">— الوزن {{ Fmt::num($o->weight) }}%</span>
+                @if ($o->strategicGoal)<span class="badge info">{{ $o->strategicGoal->ref }}</span>@elseif ($goals->isNotEmpty())<span class="badge warn">غير مرتبط بهدف استراتيجي</span>@endif
                 @if ($o->indicators->isEmpty())<span class="badge warn">بلا مؤشر</span>@endif
                 @if ($iw->isNotEmpty())<span class="badge {{ abs($isum - 100) < 0.01 && $iw->count() === $o->indicators->count() ? 'ok' : 'warn' }}">أوزان المؤشرات {{ Fmt::num($isum) }}%</span>@endif
             </summary>
@@ -46,6 +47,14 @@
                         <div class="field"><label class="f">الوزن %</label><input type="number" step="0.01" min="0" max="100" name="weight" value="{{ $o->weight }}"></div>
                         <div class="field" style="align-self:end"><button class="btn sec sm">حفظ الهدف</button></div>
                         <div class="field full"><label class="f">وصف الهدف</label><textarea name="description" rows="2">{{ $o->description }}</textarea></div>
+                        <div class="field full"><label class="f">الهدف الاستراتيجي للجمعية</label>
+                            <select name="strategic_goal_id">
+                                <option value="">— غير مرتبط —</option>
+                                @foreach ($goals as $g)<option value="{{ $g->id }}" @selected($o->strategic_goal_id == $g->id)>{{ $g->label() }}</option>@endforeach
+                                @if ($o->strategicGoal && ! $goals->contains('id', $o->strategic_goal_id))<option value="{{ $o->strategic_goal_id }}" selected>{{ $o->strategicGoal->label() }} (مؤرشف)</option>@endif
+                            </select>
+                            @if ($goals->isEmpty())<div class="hint">لا توجد أهداف استراتيجية فعّالة لسنة الخطة بعد؛ يضيفها الرئيس أو مسؤولة التخطيط من «الأهداف الاستراتيجية».</div>@endif
+                        </div>
                     </div>
                 </form>
 
@@ -86,38 +95,55 @@
             <div class="field"><label class="f">الوزن %</label><input type="number" step="0.01" min="0" max="100" name="weight" value="{{ max(0, 100 - $wsum) ?: '' }}"></div>
             <div class="field" style="align-self:end"><button class="btn sm">إضافة الهدف</button></div>
             <div class="field full"><label class="f">وصف الهدف</label><textarea name="description" rows="2"></textarea></div>
+                        <div class="field full"><label class="f">الهدف الاستراتيجي للجمعية</label>
+                            <select name="strategic_goal_id">
+                                <option value="">— غير مرتبط —</option>
+                                @foreach ($goals as $g)<option value="{{ $g->id }}" @selected(old('strategic_goal_id') == $g->id)>{{ $g->label() }}</option>@endforeach
+                                
+                            </select>
+                            @if ($goals->isEmpty())<div class="hint">لا توجد أهداف استراتيجية فعّالة لسنة الخطة بعد؛ يضيفها الرئيس أو مسؤولة التخطيط من «الأهداف الاستراتيجية».</div>@endif
+                        </div>
         </div>
     </form>
 </div>
 
 <div class="card" id="projects">
-    <h2>3. المبادرات والمشاريع والمهام</h2>
-    @foreach ($plan->projects as $p)
+    <h2>3. المبادرات والأنشطة والمهام</h2>
+    <p class="small muted">التسلسل: مبادرة أو مشروع ← أنشطة ← مهام، ولكل مستوى مسؤول. تُعطى الأرقام المرجعية تلقائيًا ولا تتغير.</p>
+    @foreach ($plan->projects->whereNull('parent_id') as $p)
         <details class="box">
-            <summary>{{ $p->typeLabel() }}: {{ $p->name }} <span class="small muted">({{ $p->tasks()->count() }} مهمة)</span></summary>
+            <summary><span class="num small muted">{{ $p->ref }}</span> {{ $p->typeLabel() }}: {{ $p->name }}
+                <span class="small muted">({{ $p->activities->count() }} نشاط · {{ $p->tasks()->count() }} مهمة مباشرة{{ $p->owner ? ' · المسؤول: ' . $p->owner->name : '' }})</span></summary>
             <div class="in">
                 <form method="post" action="{{ route('projects.update', $p) }}">@csrf @method('put')
                     @include('plans._project-fields', ['p' => $p])
-                    <div class="row"><button class="btn sec sm">حفظ المشروع</button></div>
+                    <div class="row"><button class="btn sec sm">حفظ {{ $p->typeLabel() }}</button></div>
                 </form>
-                <form method="post" action="{{ route('projects.destroy', $p) }}" style="margin-top:.4rem">@csrf @method('delete')<button class="btn danger sm" data-confirm="حذف المشروع؟ تبقى مهامه دون مشروع.">حذف المشروع</button></form>
-                <h3 style="margin-top:1rem">مهام المشروع</h3>
-                @foreach ($p->tasks as $t)
-                    <details class="box"><summary class="small">ر{{ $t->quarter }} — {{ $t->title }} <span class="muted">{{ Fmt::date($t->due_on) }}</span></summary>
+                <form method="post" action="{{ route('projects.destroy', $p) }}" style="margin-top:.4rem">@csrf @method('delete')<button class="btn danger sm" data-confirm="حذف {{ $p->typeLabel() }} {{ $p->ref }}؟ تبقى مهامه دون ارتباط.">حذف {{ $p->typeLabel() }}</button></form>
+
+                <h3 style="margin-top:1rem">الأنشطة</h3>
+                @foreach ($p->activities as $a)
+                    <details class="box">
+                        <summary class="small"><span class="num muted">{{ $a->ref }}</span> {{ $a->name }} <span class="muted">({{ $a->tasks()->count() }} مهمة{{ $a->owner ? ' · ' . $a->owner->name : '' }})</span></summary>
                         <div class="in">
-                            <form method="post" action="{{ route('tasks.update', $t) }}">@csrf @method('put')
-                                @include('plans._task-fields', ['t' => $t, 'projectId' => $p->id])
-                                <button class="btn sec sm">حفظ المهمة</button>
+                            <form method="post" action="{{ route('projects.update', $a) }}">@csrf @method('put')
+                                @include('plans._activity-fields', ['a' => $a, 'parent' => $p])
+                                <button class="btn sec sm">حفظ النشاط</button>
                             </form>
-                            <form method="post" action="{{ route('tasks.destroy', $t) }}" style="margin-top:.4rem">@csrf @method('delete')<button class="btn danger sm" data-confirm="حذف المهمة؟">حذف</button></form>
+                            <form method="post" action="{{ route('projects.destroy', $a) }}" style="margin-top:.4rem">@csrf @method('delete')<button class="btn danger sm" data-confirm="حذف النشاط {{ $a->ref }}؟ تبقى مهامه دون ارتباط.">حذف النشاط</button></form>
+                            <h3 style="margin-top:.8rem">مهام النشاط</h3>
+                            @include('plans._tasks-editor', ['holder' => $a])
                         </div>
                     </details>
                 @endforeach
-                <form method="post" action="{{ route('tasks.store', $plan) }}" class="card" style="background:var(--bg);box-shadow:none;margin-top:.5rem">@csrf
-                    <h3>+ مهمة جديدة</h3>
-                    @include('plans._task-fields', ['t' => null, 'projectId' => $p->id])
-                    <button class="btn sm">إضافة المهمة</button>
+                <form method="post" action="{{ route('projects.store', $plan) }}" class="card" style="background:var(--bg);box-shadow:none;margin-top:.5rem">@csrf
+                    <h3>+ نشاط جديد ضمن {{ $p->ref }}</h3>
+                    @include('plans._activity-fields', ['a' => null, 'parent' => $p])
+                    <button class="btn sm">إضافة النشاط</button>
                 </form>
+
+                <h3 style="margin-top:1rem">مهام مباشرة (دون نشاط)</h3>
+                @include('plans._tasks-editor', ['holder' => $p])
             </div>
         </details>
     @endforeach

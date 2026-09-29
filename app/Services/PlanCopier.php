@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * ينسخ هيكل خطة سنة سابقة إلى مسودة سنة جديدة:
- * الأهداف والأوزان والمؤشرات ومستهدفاتها والمشاريع والمهام والمخاطر والموارد.
+ * الأهداف والأوزان وربطها بالأهداف الاستراتيجية والمؤشرات ومستهدفاتها والمبادرات وأنشطتها والمهام والمخاطر والموارد.
+ * تُولَّد أرقام مرجعية جديدة للسنة الجديدة.
  * لا يُنسخ الإنجاز ولا الأدلة ولا الاعتمادات ولا حالة الخطة.
  */
 class PlanCopier
@@ -34,7 +35,7 @@ class PlanCopier
             ]);
             $objMap = [];
             foreach ($source->objectives as $o) {
-                $no = $plan->objectives()->create($o->only(['title', 'description', 'weight', 'sort']));
+                $no = $plan->objectives()->create($o->only(['title', 'description', 'weight', 'sort', 'strategic_goal_id']));
                 $objMap[$o->id] = $no->id;
                 foreach ($o->indicators as $i) {
                     $ni = $no->indicators()->create(['plan_id' => $plan->id] + $i->only([
@@ -47,9 +48,11 @@ class PlanCopier
                 }
             }
             $projMap = [];
-            foreach ($source->projects as $p) {
+            // المبادرات أولًا ثم أنشطتها حتى تُربط الأنشطة بالمبادرات الجديدة
+            foreach ($source->projects->sortBy(fn ($p) => [$p->parent_id ? 1 : 0, $p->id]) as $p) {
                 $np = $plan->projects()->create([
                     'objective_id' => $objMap[$p->objective_id] ?? null,
+                    'parent_id' => $p->parent_id ? ($projMap[$p->parent_id] ?? null) : null,
                     'starts_on' => $p->starts_on?->copy()->addYears($shift),
                     'ends_on' => $p->ends_on?->copy()->addYears($shift),
                 ] + $p->only(['type', 'name', 'description', 'responsible', 'owner_user_id', 'resources']));
