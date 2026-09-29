@@ -12,6 +12,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Render (and most hosts) terminate HTTPS at a proxy: trust it so
+        // asset() / url() generate https:// links and secure cookies work.
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'active' => \App\Http\Middleware\EnsureActive::class,
             'context' => \App\Http\Middleware\ShareContext::class,

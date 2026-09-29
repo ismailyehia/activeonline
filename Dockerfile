@@ -30,8 +30,10 @@ max_execution_time=120\n\
 # ─── Composer ───
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# ─── Apache config ───
-RUN a2enmod rewrite headers
+# ─── Apache: modules + site config (DocumentRoot = /var/www/html/public) ───
+RUN a2enmod rewrite headers expires \
+    && echo "ServerName localhost" > /etc/apache2/conf-available/servername.conf \
+    && a2enconf servername
 COPY docker/apache.conf /etc/apache2/sites-available/000-default.conf
 
 # ─── App code ───
@@ -41,10 +43,11 @@ COPY . .
 # ─── Install dependencies (production) ───
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 
-# ─── Laravel cache optimizations ───
-RUN php artisan config:cache \
-    && php artisan route:cache \
-    && php artisan view:cache
+# ─── Laravel caches that don't depend on env vars ───
+# (config:cache runs at container start, when Render's env vars exist)
+RUN php artisan route:cache \
+    && php artisan view:cache \
+    && test -f public/index.php
 
 # ─── Permissions ───
 RUN chown -R www-data:www-data storage bootstrap/cache \
